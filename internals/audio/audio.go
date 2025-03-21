@@ -2,10 +2,14 @@ package audio
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"math"
+	"math/cmplx"
 
 	"github.com/rs/zerolog"
 	ffmpeg_go "github.com/u2takey/ffmpeg-go"
+	"gonum.org/v1/gonum/dsp/fourier"
 )
 
 type AudioService struct {
@@ -13,7 +17,7 @@ type AudioService struct {
 }
 
 // ConvertToMonoPCM converts audio bytes to raw PCM format
-func (a AudioService) ConvertToMonoPCM(audioBytes []byte) ([]byte, error) {
+func (a AudioService) ConvertToMonoPCM(audioBytes []byte) ([]float64, error) {
 	input := bytes.NewReader(audioBytes)
 	output := &bytes.Buffer{}
 
@@ -29,5 +33,31 @@ func (a AudioService) ConvertToMonoPCM(audioBytes []byte) ([]byte, error) {
 	}
 
 	a.Log.Info().Msg("Successfully converted audio to PCM")
-	return output.Bytes(), nil
+	return a.ToFloat64(output.Bytes()), nil
+}
+
+// ToFloat64 converts 16-bit PCM bytes to a slice of float64 values
+func (a AudioService) ToFloat64(pcmData []byte) []float64 {
+	numSamples := len(pcmData) / 2
+	Samples := make([]float64, numSamples)
+
+	for i := 0; i < numSamples; i++ {
+		sample := int16(binary.LittleEndian.Uint16(pcmData[i*2 : i*2+2])) // Read 16-bit PCM
+		Samples[i] = float64(sample) / math.MaxInt16
+	}
+
+	return Samples
+}
+
+// ApplyFFT converts PCM samples to frequency magnitudes using FFT(Fast Fourier Transform)
+func (a AudioService) ApplyFFT(samples []float64) []float64 {
+	fft := fourier.NewFFT(len(samples))
+	fftData := fft.Coefficients(nil, samples)
+
+	magnitudes := make([]float64, len(fftData))
+	for i := range fftData {
+		magnitudes[i] = cmplx.Abs(fftData[i])
+	}
+
+	return magnitudes
 }

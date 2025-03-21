@@ -11,4 +11,5 @@ require (
 	github.com/u2takey/ffmpeg-go v0.5.0 // indirect
 	github.com/u2takey/go-utils v0.3.1 // indirect
 	golang.org/x/sys v0.12.0 // indirect
+	gonum.org/v1/gonum v0.15.1 // indirect
 )

@@ -50,12 +50,13 @@ func (a AudioService) ToFloat64(pcmData []byte) []float64 {
 }
 
 // ApplyFFT converts PCM samples to frequency magnitudes using FFT(Fast Fourier Transform)
+// Only store positive frequencies
 func (a AudioService) ApplyFFT(samples []float64) []float64 {
 	fft := fourier.NewFFT(len(samples))
 	fftData := fft.Coefficients(nil, samples)
 
-	magnitudes := make([]float64, len(fftData))
-	for i := range fftData {
+	magnitudes := make([]float64, len(fftData)/2)
+	for i := range magnitudes {
 		magnitudes[i] = cmplx.Abs(fftData[i])
 	}
 

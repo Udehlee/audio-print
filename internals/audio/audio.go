@@ -51,7 +51,8 @@ func (a AudioService) ToFloat64(pcmData []byte) []float64 {
 
 // ApplyFFT converts PCM samples to frequency magnitudes using FFT(Fast Fourier Transform)
 // Only store positive frequencies
-func (a AudioService) ApplyFFT(samples []float64) []float64 {
+// Extracts  Spectral Peaks
+func (a AudioService) ApplyFFT(samples []float64, numPeaks int) []int {
 	fft := fourier.NewFFT(len(samples))
 	fftData := fft.Coefficients(nil, samples)
 
@@ -60,5 +61,24 @@ func (a AudioService) ApplyFFT(samples []float64) []float64 {
 		magnitudes[i] = cmplx.Abs(fftData[i])
 	}
 
-	return magnitudes
+	return a.ExtractPeaks(magnitudes, numPeaks)
+}
+
+// GenerateFingerprint creates a unique fingerprint from extracted peaks
+// Store hash with the first occurrence timestamp
+func (a AudioService) GenerateFingerprint(peaks []int, timeStamps []int) map[uint64]int {
+	fingerprint := make(map[uint64]int)
+	fanOut := 5
+
+	for i := 0; i < len(peaks); i++ {
+		for j := 1; j <= fanOut && i+j < len(peaks); j++ {
+			f1 := peaks[i]
+			f2 := peaks[i+j]
+			t1 := timeStamps[i]
+			hash := a.HashPeaks(f1, f2, timeStamps[i+j]-t1)
+			fingerprint[hash] = t1
+		}
+	}
+
+	return fingerprint
 }
